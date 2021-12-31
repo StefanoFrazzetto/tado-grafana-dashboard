@@ -1,0 +1,39 @@
+version: '3'
+
+services:
+  tado-exporter:
+    image: ekofr/tado-exporter:latest
+    ports:
+      - 9898:9898
+    environment:
+      - EXPORTER_USERNAME=${TADO_USERNAME}
+      - EXPORTER_PASSWORD=${TADO_PASSWORD}
+      - EXPORTER_TICKER=${TADO_FETCH_INTERVAL}
+
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - 9090:9090
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    command: --web.enable-lifecycle  --config.file=/etc/prometheus/prometheus.yml
+    depends_on:
+      - tado-exporter
+
+  grafana:
+    image: grafana/grafana-oss
+    ports:
+      - 3000:3000
+    volumes:
+      # https://grafana.com/docs/grafana/latest/administration/provisioning/#config-file-locations
+      - ./grafana/grafana.ini:/etc/grafana/grafana.ini
+
+      # https://grafana.com/docs/grafana/latest/administration/provisioning/#data-sources
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+
+      # https://grafana.com/docs/grafana/latest/administration/provisioning/#provision-folders-structure-from-filesystem-to-grafana
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ./grafana/dashboards:/etc/dashboards
+
+    depends_on:
+      - prometheus
